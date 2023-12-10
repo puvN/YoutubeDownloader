@@ -16,7 +16,6 @@ def download():
     try:
         yt_link = link1.get()
         youtube_link = pytube.YouTube(yt_link)
-        # video = youtube_link.streams.get_highest_resolution()
         video = youtube_link.streams.filter(adaptive=True).filter(mime_type='video/webm').first()
         video.download()
         progressbar.stop()
