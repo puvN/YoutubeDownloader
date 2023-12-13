@@ -4,9 +4,7 @@ from threading import Thread
 import os
 import pytube
 from tkinter import messagebox
-from moviepy.editor import VideoFileClip
-from pydub import AudioSegment
-import ffmpeg
+import subprocess
 
 root = Tk()
 root.geometry("500x250")
@@ -34,26 +32,23 @@ def download_video_and_audio(url, output_path="."):
         return None, None
 
 
-def merge_video_and_audio(video_file, audio_file, output_file):
+def merge_video_and_audio(video_file, audio_file, output_file, progressbar):
     try:
-        video = VideoFileClip(video_file)
-        audio = AudioSegment.from_file(audio_file, format="webm")
-
-        # Set the audio of the video file to the downloaded audio
-        video = video.set_audio(audio)
-
-        # Write the merged video with audio to a file
-        video.write_videofile(output_file, codec="libx264", audio_codec="aac")
+        # Use ffmpeg directly for merging
+        subprocess.run(
+            ['ffmpeg', '-i', video_file, '-i', audio_file, '-c:v', 'libx265', '-b:v', '2M', '-c:a', 'aac', output_file],
+            check=True)
 
         # Cleanup - delete the individual video and audio files
-        video.close()
-        audio.close()
-
-        # Delete the original video and audio files
         os.remove(video_file)
         os.remove(audio_file)
-    except Exception as e:
+
+    except subprocess.CalledProcessError as e:
         messagebox.showerror("Ошибка", f"Ошибка при совмещении видео и аудио: {str(e)}")
+
+    finally:
+        # Stop the progress bar after ffmpeg is done
+        progressbar.stop()
 
 
 def download():
@@ -62,12 +57,12 @@ def download():
         video_file, audio_file = download_video_and_audio(yt_link)
 
         if video_file and audio_file:
-            progressbar.stop()
-            Result = "Загрузка завершена"
-            messagebox.showinfo("Готово", Result)
+            # Use the name of the video file as the output file name
+            output_file = os.path.splitext(video_file)[0] + "_downloaded.mp4"
 
-            output_file = "merged_video.mp4"
-            merge_video_and_audio(video_file, audio_file, output_file)
+            # Run the merging process in a new thread
+            Thread(target=merge_video_and_audio, args=(video_file, audio_file, output_file, progressbar)).start()
+
     except Exception as e:
         Result = f"Ошибка: {str(e)}"
         messagebox.showerror("Ошибка", Result)
@@ -76,7 +71,7 @@ def download():
 def download_button_clicked():
     progressbar.place(x=160, y=140, width=300)
     progressbar.start()
-    # Download the file in a new thread.
+    # Download the file in the current thread.
     Thread(target=download).start()
 
 
