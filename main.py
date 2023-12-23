@@ -32,19 +32,21 @@ def download_video_and_audio(url, output_path="."):
         return None, None
 
 
-def merge_video_and_audio(video_file, audio_file, output_file, progressbar):
+def add_audio_to_video(video_file, audio_file, output_file, progressbar):
     try:
-        # Use ffmpeg directly for merging
-        subprocess.run(
-            ['ffmpeg', '-i', video_file, '-i', audio_file, '-c:v', 'libx265', '-b:v', '2M', '-c:a', 'aac', output_file],
-            check=True)
+        # Use ffmpeg to add audio to the video without re-encoding the video
+        subprocess.run(['ffmpeg', '-i', video_file, '-i', audio_file, '-c', 'copy', '-map', '0:v', '-map', '1:a', output_file], check=True)
 
-        # Cleanup - delete the individual video and audio files
-        os.remove(video_file)
+        # Cleanup - delete the temporary audio file
         os.remove(audio_file)
+        os.remove(video_file)
+
+        progressbar.stop()
+        # Show success message
+        messagebox.showinfo("Готово", "Загрузка завершена успешно.")
 
     except subprocess.CalledProcessError as e:
-        messagebox.showerror("Ошибка", f"Ошибка при совмещении видео и аудио: {str(e)}")
+        messagebox.showerror("Ошибка", f"Ошибка при добавлении аудио к видео: {str(e)}")
 
     finally:
         # Stop the progress bar after ffmpeg is done
@@ -61,7 +63,7 @@ def download():
             output_file = os.path.splitext(video_file)[0] + "_downloaded.mp4"
 
             # Run the merging process in a new thread
-            Thread(target=merge_video_and_audio, args=(video_file, audio_file, output_file, progressbar)).start()
+            Thread(target=add_audio_to_video, args=(video_file, audio_file, output_file, progressbar)).start()
 
     except Exception as e:
         Result = f"Ошибка: {str(e)}"
