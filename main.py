@@ -9,7 +9,7 @@ import subprocess
 root = Tk()
 root.geometry("500x250")
 root.resizable(False, False)
-root.title("Код")
+root.title("YoutubeDownloader")
 root.config(bg='#D3D3D3')
 
 
